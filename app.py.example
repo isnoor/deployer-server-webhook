@@ -1,0 +1,41 @@
+from flask import Flask
+import subprocess
+
+app = Flask(__name__)
+
+@app.route('/webhook_frontend', methods=['GET'])
+def webhook_frontend():
+    try:
+        working_directory_frontend = 'absolute path to project directory exp /home/frontend'
+
+	 # Execute git pull
+        subprocess.run(['/usr/bin/git', 'pull'], check=True, cwd=working_directory_frontend)
+
+        # Restart Docker Compose
+        subprocess.run(['/usr/bin/docker','compose', 'restart'], check=True, cwd=working_directory_frontend)
+
+        return 'Git pull and Docker Compose restart successful', 200
+
+    except subprocess.CalledProcessError as e:
+        return f'Error restarting Docker Compose service: {e}', 500
+
+
+@app.route('/webhook_backend', methods=['GET'])
+def webhook_backend():
+    try:
+        working_directory = 'absolute path to project directory exp /home/backend'
+         # Execute git pull
+        subprocess.run(['git', 'pull'], check=True, cwd=working_directory)
+
+        # Restart Docker Compose
+        subprocess.run(['docker','compose', 'restart','total-recall'], check=True, cwd=working_directory)
+
+        return 'Git pull and Docker Compose restart successful', 200
+
+    except subprocess.CalledProcessError as e:
+        return f'Error restarting Docker Compose service: {e}', 500
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
