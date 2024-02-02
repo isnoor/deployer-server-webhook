@@ -3,16 +3,19 @@ Please make sure project already clone from git with ssh authentication.
 
 
 ## Install python3 & venv
-sudo apt install python3
-apt-get install python3-venv
-
+````
+sudo apt install python3 python3-venv
+````
 ## Install Flask & unicorn
+````
+git clone https://github.com/isnoor/deployer-server-webhook.git deployer-server-webhook
+cd deployer-server-webhook
 python3 -m venv venv
 
 source venv/bin/activate
 pip install Flask
 pip install gunicorn
-
+````
 ## Modify app.py
 Copy app.py.example to app.py. Modify file app.py
 
