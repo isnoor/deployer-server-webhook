@@ -1,29 +1,83 @@
-from flask import Flask
+from flask import Flask, Response
 import subprocess
 
 app = Flask(__name__)
 
-@app.route('/webhook_frontend', methods=['GET'])
-def webhook_frontend():
+def update_and_restart(working_directory, compose_service=None):
     try:
-        working_directory_frontend = 'absolute path to project directory exp /home/frontend'
+        # Execute git pull
+        subprocess.run(['/usr/bin/git', 'pull'], check=True, cwd=working_directory)
 
-	 # Execute git pull
-        subprocess.run(['/usr/bin/git', 'pull'], check=True, cwd=working_directory_frontend)
+        # Execute git pull
+        subprocess.run(['/usr/bin/git', 'pull'], check=True, cwd=working_directory)
 
         # Restart Docker Compose
-        subprocess.run(['/usr/bin/docker','compose', 'restart'], check=True, cwd=working_directory_frontend)
+        restart_command = ['/usr/bin/docker', 'restart']
+        if compose_service:
+            restart_command.append(compose_service)
+        subprocess.run(restart_command, check=True, cwd=working_directory)
 
         return 'Git pull and Docker Compose restart successful', 200
 
     except subprocess.CalledProcessError as e:
         return f'Error restarting Docker Compose service: {e}', 500
 
+def build_and_update(working_directory, compose_service=None):
+    try:
+        # Execute git pull
+        subprocess.run(['/usr/bin/git', 'pull'], check=True, cwd=working_directory)
+
+        # Execute git pull
+        subprocess.run(['/usr/bin/git', 'pull'], check=True, cwd=working_directory)
+
+        # Restart Docker Compose
+        build_command = ['/usr/bin/docker', 'compose','build','--no-cache']
+        subprocess.run(build_command, check=True, cwd=working_directory)
+
+        up_command = ['/usr/bin/docker', 'compose','up','-d']
+        if compose_service:
+            up_command.append(compose_service)
+        subprocess.run(up_command, check=True, cwd=working_directory)
+
+        return 'Git pull and Docker Compose build successful', 200
+
+    except subprocess.CalledProcessError as e:
+        return f'Error restarting Docker Compose service: {e}', 500
+
+
+def log_container(container):
+    try:
+        # Execute log
+        result = subprocess.run(['docker','logs','--tail','400',container], capture_output=True, text=True, check=True)
+
+        combined_output = result.stdout + '\n' + result.stderr
+
+        html_result = combined_output.replace('\n', '<br/>')
+        return Response(f'complate : {html_result}', mimetype='text/html')
+
+    except subprocess.CalledProcessError as e:
+        return f'Error : {e}', 500
+
+
+@app.route('/webhook_frontend', methods=['GET'])
+def webhook_frontend():
+    try:
+        working_directory_frontend = '/home/frontend'
+	 # Execute git pull
+        subprocess.run(['git', 'pull'], check=True, cwd=working_directory_frontend)
+
+        # Restart Docker Compose
+        subprocess.run(['docker','compose', 'restart'], check=True, cwd=working_directory_frontend)
+
+        return 'Git pull and Docker Compose restart successful', 200
+
+    except subprocess.CalledProcessError as e:
+        return f'Error restarting Docker Compose service: {e}', 500
 
 @app.route('/webhook_backend', methods=['GET'])
 def webhook_backend():
     try:
-        working_directory = 'absolute path to project directory exp /home/backend'
+        working_directory = '/home/backend'
          # Execute git pull
         subprocess.run(['git', 'pull'], check=True, cwd=working_directory)
 
@@ -35,7 +89,30 @@ def webhook_backend():
     except subprocess.CalledProcessError as e:
         return f'Error restarting Docker Compose service: {e}', 500
 
+@app.route('/dynamic365', methods=['GET'])
+def dynamic365():
+    return build_and_update('/home/365dotnet')
+
+@app.route('/api_log', methods=['GET'])
+def trs_api_log():
+    return log_container('api-backend')
+
+@app.route('/app_log', methods=['GET'])
+def trs_app_log():
+    return log_container('app-frontend')
+
+@app.route('/server_pr0c')
+def server_pr0c():
+    try:
+        result = subprocess.run(['/bin/bash', 'git_helper.sh'], capture_output=True, text=True, check=True, cwd="/home/deployer")
+        print("Command Output:", flush=True)
+        print(result.stdout)
+        print(result.stderr)
+        html_result = result.stdout.replace('\n', '<br/>')
+        return f'complate : {html_result}', 200
+
+    except subprocess.CalledProcessError as e:
+        return f'Error : {e}', 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
